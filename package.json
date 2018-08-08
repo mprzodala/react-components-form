@@ -40,7 +40,8 @@
     "prop-types": "^15.6.0",
     "react": "^15.6.0 || ^16.0.0",
     "react-autosuggest": "^9.3.2",
-    "react-dom": "^15.5.4 || ^16.0.0"
+    "react-dom": "^15.5.4 || ^16.0.0",
+    "rxjs": "^6.2.2"
   },
   "devDependencies": {
     "babel-core": "^6.21.0",
