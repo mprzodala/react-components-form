@@ -2,6 +2,7 @@ import React from 'react';
 import isEqual from 'lodash/isEqual';
 import PropTypes from 'prop-types';
 import cloneDeep from 'lodash/cloneDeep';
+import eventsEmitterEvents from '../constants/eventsEmitterEvents';
 
 export const FieldConnect = (Component) => {
     class FieldConnector extends React.Component {
@@ -60,7 +61,7 @@ export const FieldConnect = (Component) => {
                 setModel(name, value, () => {
                     const fieldPath = this.getPath();
                     if (eventsEmitter) {
-                        eventsEmitter.emit('modelChange', {
+                        eventsEmitter.emit(eventsEmitterEvents.MODEL_CHANGE, {
                             name: fieldPath,
                             value,
                         });

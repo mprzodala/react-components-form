@@ -3,23 +3,24 @@ import { mount } from 'enzyme';
 import Schema from 'form-schema-validation';
 import PropTypes from 'prop-types';
 import {
-    Form,
-    TextField,
-    NumberField,
-    SubmitField,
-    ObjectField,
-    FormEventsEmitter,
     ErrorField,
+    Form,
+    FormEventsEmitter,
+    NumberField,
+    ObjectField,
+    SubmitField,
+    TextField,
 } from '../../src/components';
 import FormController from '../../src/components/FormController';
 import FieldConnect from '../../src/components/FieldConnect';
-import { titleSchema, bookSchema, fooBarSchema } from '../data/schemas';
+import { bookSchema, fooBarSchema, titleSchema } from '../data/schemas';
+import eventsEmitterEvents from '../../src/constants/eventsEmitterEvents';
 
 
 describe('Form', () => {
     jest.useFakeTimers();
 
-    it('should run error method from props', () => {
+    it('should run error method from props and emit onSubmitError event', () => {
         const loginSchema = new Schema({
             login: {
                 type: String,
@@ -33,9 +34,14 @@ describe('Form', () => {
 
         const mockSubmit = jest.fn();
         const mockError = jest.fn();
+        const eventsEmitter = {
+            emit: jest.fn(),
+            listen: jest.fn(),
+        };
 
         const wrapper = mount(
             <Form
+                eventsEmitter={eventsEmitter}
                 schema={loginSchema}
                 onError={mockError}
                 onSubmit={mockSubmit}
@@ -48,6 +54,15 @@ describe('Form', () => {
         const fieldSubmit = wrapper.find(SubmitField);
         fieldSubmit.find('button').simulate('click');
         expect(mockError.mock.calls.length).toBe(1);
+        expect(eventsEmitter.emit).toHaveBeenCalledWith(
+            eventsEmitterEvents.ON_SUBMIT_ERROR,
+            {
+                validationErrors: {
+                    login: ["Field 'login' is required"],
+                    password: ["Field 'password' is required"],
+                },
+                model: { login: '', password: '' },
+            });
     });
 
     it('return all validation errors from form', () => {
@@ -206,7 +221,12 @@ describe('Form', () => {
         expect(mockSubmit.mock.calls.length).toBe(0);
     });
 
-    it('should run submit method from props', () => {
+    it('should run submit method from props and emit onSubmitSuccess event', () => {
+        const eventsEmitter = {
+            emit: jest.fn(),
+            listen: jest.fn(),
+        };
+
         const loginSchema = new Schema({
             login: {
                 type: String,
@@ -226,6 +246,7 @@ describe('Form', () => {
 
         const wrapper = mount(
             <Form
+                eventsEmitter={eventsEmitter}
                 schema={loginSchema}
                 onSubmit={mockSubmit}
                 model={model}
@@ -238,12 +259,20 @@ describe('Form', () => {
         const fieldSubmit = wrapper.find(SubmitField);
         fieldSubmit.find('button').simulate('click');
         expect(mockSubmit.mock.calls.length).toBe(1);
+        expect(eventsEmitter.emit).toHaveBeenCalledWith(
+            eventsEmitterEvents.ON_SUBMIT_SUCCESS, model,
+        );
 
         mockSubmit.mockClear();
+        eventsEmitter.emit.mockClear();
+        eventsEmitter.listen.mockClear();
 
         const formComponent = wrapper.find(Form);
         formComponent.find('form').simulate('submit', { preventDefault: jest.fn() });
         expect(mockSubmit).toHaveBeenCalledTimes(1);
+        expect(eventsEmitter.emit).toHaveBeenCalledWith(
+            eventsEmitterEvents.ON_SUBMIT_SUCCESS, model,
+        );
     });
 
     it('should update model on field value change', () => {
@@ -266,7 +295,10 @@ describe('Form', () => {
         const wrapper = mount(
             <Form
                 onSubmit={({ title }) => expect(title).toBe('test')}
-                customValidation={(model) => { mockCustomValidation(model); return {}; }}
+                customValidation={(model) => {
+                    mockCustomValidation(model);
+                    return {};
+                }}
                 validateOnChange
             >
                 <TextField name="title" label="Title" />
@@ -300,7 +332,8 @@ describe('Form', () => {
                         onModelChange={onModelChange}
                     />
                 </Form>
-                <button className="testValidate" onClick={() => eventsEmitter.emit('validate')}>Outside validate</button>
+                <button className="testValidate" onClick={() => eventsEmitter.emit('validate')}>Outside validate
+                </button>
                 <button className="testSubmit" onClick={() => eventsEmitter.emit('submit')}>Outside submit</button>
             </div>
         );
@@ -638,10 +671,12 @@ describe('Form', () => {
     });
     describe('fieldValidators', () => {
         const barValidator = value => (value === 'test' ? true : 'barError');
+
         class InputWithValidator extends React.Component {
             componentWillMount() {
                 this.context.setFieldValidator(this.fieldValidator);
             }
+
             onChangeValue = ({ target: { value } }) => {
                 this.props.onChange(value);
             };
@@ -651,6 +686,7 @@ describe('Form', () => {
                 }
                 return 'fooError';
             };
+
             render() {
                 const { name, value } = this.props;
                 return (
@@ -660,6 +696,7 @@ describe('Form', () => {
                 );
             }
         }
+
         InputWithValidator.contextTypes = {
             setFieldValidator: PropTypes.func,
         };

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import cloneDeep from 'lodash/cloneDeep';
 import get from 'lodash/get';
 import Storage from './Storage';
+import eventsEmitterEvents from '../constants/eventsEmitterEvents';
 
 class Form extends React.Component {
     constructor(props) {
@@ -63,9 +64,9 @@ class Form extends React.Component {
     componentWillMount() {
         this.storage.listen(this.setStateModel);
         if (this.eventsEmitter) {
-            this.eventsEmitter.listen('submit', this.submitListener);
-            this.eventsEmitter.listen('validate', this.validateListener);
-            this.eventsEmitter.listen('reset', this.resetListener);
+            this.eventsEmitter.listen(eventsEmitterEvents.SUBMIT, this.submitListener);
+            this.eventsEmitter.listen(eventsEmitterEvents.VALIDATE, this.validateListener);
+            this.eventsEmitter.listen(eventsEmitterEvents.RESET, this.resetListener);
         }
     }
 
@@ -73,9 +74,9 @@ class Form extends React.Component {
         this.storage.unlisten(this.setStateModel);
         this.storage.setModel({});
         if (this.eventsEmitter) {
-            this.eventsEmitter.unlisten('submit', this.submitListener);
-            this.eventsEmitter.unlisten('validate', this.validateListener);
-            this.eventsEmitter.unlisten('reset', this.resetListener);
+            this.eventsEmitter.unlisten(eventsEmitterEvents.SUBMIT, this.submitListener);
+            this.eventsEmitter.unlisten(eventsEmitterEvents.VALIDATE, this.validateListener);
+            this.eventsEmitter.unlisten(eventsEmitterEvents.RESET, this.resetListener);
         }
     }
 
@@ -216,10 +217,19 @@ class Form extends React.Component {
     runSubmit(validationErrors, modelData) {
         const model = cloneDeep(modelData);
         if (Object.keys(validationErrors).length > 0) {
+            if (this.eventsEmitter) {
+                this.eventsEmitter.emit(
+                    eventsEmitterEvents.ON_SUBMIT_ERROR,
+                    { validationErrors, model },
+                );
+            }
             if (this.props.onError) this.props.onError(validationErrors, model);
             return undefined;
         }
         this.setState({ validateOnChange: false });
+        if (this.eventsEmitter) {
+            this.eventsEmitter.emit(eventsEmitterEvents.ON_SUBMIT_SUCCESS, model);
+        }
         this.props.onSubmit(model);
         return model;
     }
